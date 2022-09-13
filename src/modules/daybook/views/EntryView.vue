@@ -22,6 +22,7 @@
         <textarea placeholder="¿Que sucedió hoy?" v-model="entry.text"></textarea>
     </div>
     <Fab icon="fa-save" @on:click="saveEntry"/>
+    <img v-if="entry.picture && !localImage" :src="entry.picture" alt="entry-picture"/>
     <img v-if="localImage" :src="localImage" alt="entry-picture"/>
 </template>
 
@@ -30,6 +31,7 @@ import { defineAsyncComponent } from 'vue';
 import { mapActions, mapGetters } from 'vuex';
 import getDayMonthYear from '@/modules/daybook/helpers/getDayMonthYear'
 import Swal from 'sweetalert2'
+import { uploadImage } from '../helpers/uploadImages';
 
    export default {
     props: {
@@ -78,13 +80,17 @@ import Swal from 'sweetalert2'
             })
             Swal.showLoading()
 
+            const picture = await uploadImage(this.file)
+            this.entry.picture = picture
+
             if(this.entry.id) {
                 await this.updateEntry( this.entry )
             } else {
                 const id = await this.createEntry(this.entry)
                 this.$router.push({ name: 'entry', params: { id } })
             }
-
+            
+            this.file = null
             Swal.fire('Guardado', 'Entrada registrada con éxito.', 'success')
         },
         async onDeleteEntry() {
@@ -105,13 +111,13 @@ import Swal from 'sweetalert2'
 
         },  
         onSelectedImage(event){
-            console.log(event)
             const file = event.target.files[0];
             if(!file){
                 this.localImage = null
                 this.file = null
                 return
             } 
+            this.file = file
             const fr = new FileReader()
             fr.onload = () => this.localImage = fr.result
             fr.readAsDataURL(file)
